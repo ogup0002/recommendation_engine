@@ -2,6 +2,8 @@ from flask import Flask, Response
 from flask_restful import Api, Resource, reqparse
 import pymysql
 import pandas as pd
+from sklearn.naive_bayes import GaussianNB
+from math import radians, cos, sin, asin, sqrt
 # import requests
 
 app = Flask(__name__)
