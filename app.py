@@ -6,7 +6,7 @@ import pandas as pd
 
 app = Flask(__name__)
 # api = Api(app)
-
+server = app.server
 
 conn = pymysql.connect(
         user="sittofit",
