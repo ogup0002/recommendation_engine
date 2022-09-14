@@ -31,6 +31,10 @@ ratings = pd.DataFrame()
 # class Preference(Resource):
 #     def get(self):
 #         return preferences[web_id]
+@app.route("/")
+def hello():
+    return {"hello": "hellll"}
+
 @app.route("/", methods = ['PUT'])
 def put():
     incoming_args = reqparse.RequestParser()
