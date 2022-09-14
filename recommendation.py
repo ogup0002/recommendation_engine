@@ -2,7 +2,7 @@ from flask import Flask, Response
 from flask_restful import Api, Resource, reqparse
 import pymysql
 import pandas as pd
-import requests
+# import requests
 
 app = Flask(__name__)
 # api = Api(app)
