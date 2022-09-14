@@ -5,3 +5,4 @@ pycurl==7.44.1
 PyMySQL==1.0.2
 unicodecsv==0.14.1
 urllib3==1.26.7
+pandas==1.4.4
