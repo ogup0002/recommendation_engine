@@ -2,10 +2,11 @@ from flask import Flask, Response
 from flask_restful import Api, Resource, reqparse
 import pymysql
 import pandas as pd
-# import requests
+import requests
 
 app = Flask(__name__)
-# api = Api(app)
+api = Api(app)
+
 
 conn = pymysql.connect(
         user="sittofit",
@@ -18,48 +19,16 @@ cursorObject = conn.cursor()
 
 
 
-# # incoming_args = reqparse.RequestParser()
-# # incoming_args.add_argument("web_id", type=int, help = "Browser ID, only integer value accepted.")
-# # incoming_args.add_argument("preference", type=str, help = "User Preferences as a list.")
-# # incoming_args.add_argument("rating", type=int, help = 'User rating can only be number 1 or 2.')
+# incoming_args = reqparse.RequestParser()
+# incoming_args.add_argument("web_id", type=int, help = "Browser ID, only integer value accepted.")
+# incoming_args.add_argument("preference", type=str, help = "User Preferences as a list.")
+# incoming_args.add_argument("rating", type=int, help = 'User rating can only be number 1 or 2.')
 
 preferences = {}
 ratings = pd.DataFrame()
+# def abort_ ()
 
 
-# class Preference(Resource):
-#     def get(self):
-#         return preferences[web_id]
-@app.route("/")
-def hello():
-    return {"hello": "hellll"}
-
-@app.route("/", methods = ['PUT'])
-def put():
-    incoming_args = reqparse.RequestParser()
-    incoming_args.add_argument("web_id", type=int, help = "Browser ID, only integer value accepted.")
-    incoming_args.add_argument("preference", type=str, help = "User Preferences as a list.")
-    args = incoming_args.parse_args()
-    preferences = args
-    print(preferences)
-    
-    # cursorObject.execute('''select * from user_pref''')
-    df = pd.DataFrame([preferences])
-    d1 = '''INSERT INTO user_pref (web_id,pref) values (%s, %s)'''
-    d2 = '''UPDATE user_pref set web_id = %s, pref = %s where web_id = %s'''
-
-    val1 = (df["web_id"][0], df["preference"][0])
-    val2 = (df['web_id'][0], df["preference"][0], df["web_id"][0])
-
-    user_data = pd.read_sql('''select * from user_pref''', conn)
-    if df['web_id'][0] in user_data['web_id'].values:
-        ## UPDATE
-        cursorObject.execute(d2, val2)
-        conn.commit()
-    else:
-        cursorObject.execute(d1, val1)
-        conn.commit()   
-    return {'view': 'Success'}
 
 @app.route("/rating", methods = ['PUT'])
 def rating_():
@@ -249,7 +218,7 @@ def rating_():
 #     return out
 
 @app.route("/trial", methods = ['GET'])
-def trying():
+def hello():
     return {"Hello": "Hello world says hi!"}
 
 if __name__ == "__main__":
