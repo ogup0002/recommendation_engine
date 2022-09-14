@@ -254,7 +254,7 @@ def hello():
     return {"Hello": "Hello world says hi!"}
 
 if __name__ == "__main__":
-    app.run()
+    app.run(debug=True)
 
 
 # return Response(df.to_json(orient="records"), mimetype='application/json')
