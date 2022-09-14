@@ -4,4 +4,4 @@ gunicorn==20.1.0
 PyMySQL==1.0.2
 pandas==1.4.4
 scikit-learn
-math
+python-math
