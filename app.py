@@ -6,7 +6,6 @@ from flask import Flask, Response
 
 app = Flask(__name__)
 # api = Api(app)
-server = app.server
 
 # conn = pymysql.connect(
 #         user="sittofit",
