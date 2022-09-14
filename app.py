@@ -249,7 +249,7 @@ def hello():
 #     return out
 
 @app.route("/trial", methods = ['GET'])
-def hello():
+def trying():
     return {"Hello": "Hello world says hi!"}
 
 if __name__ == "__main__":
