@@ -52,7 +52,7 @@ def rating_():
         conn.commit()
     return {'view': 'You have arrived here'} 
 
-@app.route("/cards", methods = ['GET'])
+@app.route("/cards", methods = ['PUT'])
 def cards():
     url = "https://api.openweathermap.org/data/2.5/weather?lat=-37.840935&lon=144.946457&appid=c92389d6904463e3cb24208905434fd9"
     response = requests.get(url)
