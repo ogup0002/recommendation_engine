@@ -52,6 +52,48 @@ def rating_():
         conn.commit()
     return {'view': 'You have arrived here'} 
 
+@app.route("/preference", methods = ['PUT'])
+def preference():
+    incoming_args = reqparse.RequestParser()
+    incoming_args.add_argument("web_id", type=int, help = "Browser ID, only integer value accepted.")
+    incoming_args.add_argument("preference", type=str, help = "List of preference (Python style) as a string", action='append')
+    args = incoming_args.parse_args()
+    preferences = args
+    # user_id = preferences['web_id']
+    # pref = preferences['pref']
+    # print(user_id)
+    # pref = []
+    # for i in range(len(preferences['pref'])):
+    #     a = ''.join(preferences['pref'][i])
+    #     pref.append(a)
+    
+    df = pd.DataFrame(columns = ['web_id', 'preference'])
+    lis = [preferences['web_id'], preferences['preference']]
+    df = pd.DataFrame([lis], columns = ['web_id', 'preference'])
+
+    d1 = '''INSERT INTO user_preference (web_id, preference) values (%s, %s)'''
+    d2 = '''UPDATE user_preference set web_id = %s, preference = %s where (web_id = %s)'''
+
+    val1 = (df["web_id"][0], df["preference"][0])
+    val2 = (df['web_id'][0], df["preference"][0], df['web_id'][0])
+
+    user_rating = pd.read_sql('''select * from user_preference''', conn)
+    comp1 = df['web_id'][0]
+    comp2 = user_rating.loc[user_rating['web_id'] == df['web_id'][0]]
+    print(comp2)
+    if not comp2.empty:
+        ## UPDATE
+        cursorObject.execute(d2, val2)
+        conn.commit()
+    else:
+        cursorObject.execute(d1, val1)
+        conn.commit()
+
+
+
+
+    return {"View": "Success"}
+
 @app.route("/cards", methods = ['PUT'])
 def cards():
     url = "https://api.openweathermap.org/data/2.5/weather?lat=-37.840935&lon=144.946457&appid=c92389d6904463e3cb24208905434fd9"
