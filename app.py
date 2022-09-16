@@ -94,8 +94,13 @@ def preference():
 
     return {"View": "Success"}
 
+
 @app.route("/cards", methods = ['PUT'])
 def cards():
+    incoming_args = reqparse.RequestParser()
+    incoming_args.add_argument("web_id", type=int, help = "Browser ID, only integer value accepted.")
+    args = incoming_args.parse_args()
+    user_id = args['web_id']
     url = "https://api.openweathermap.org/data/2.5/weather?lat=-37.840935&lon=144.946457&appid=c92389d6904463e3cb24208905434fd9"
     response = requests.get(url)
     json = response.json()
@@ -106,15 +111,19 @@ def cards():
     # data= data.drop(['Rating'], axis = 1)
     # data = data.astype({'Rating': 'int64'})
 
-    ## User RATING Data
-    id = [1011, 1074, 1273, 1180, 2002]
-    Rating = [2,2, 1, 1, 2]
-    user = pd.DataFrame()
-    user["id"] = id
-    user["Rating"] = Rating
-    #DUMMY DATA ------------ TO BE DELETED
-    pref = ['Walking', 'Cardio', 'Cycling', 'Dog']
-    
+    ## User RATING Dummy Data
+    # id = [1011, 1074, 1273, 1180, 2002]
+    # Rating = [2,2, 1, 1, 2]
+    # user = pd.DataFrame()
+    # user["id"] = id
+    # user["Rating"] = Rating
+    # User Rating
+    sql_query = 'select * from user_rating where web_id = "{}"'.format(user_id)
+    user = pd.read_sql(sql_query, conn)
+    # User Preference
+    sql_query = 'select * from user_preference where web_id = "{}"'.format(user_id)
+    pref = pd.read_sql(sql_query, conn)
+    pref = pref['preference'][0]
     if 'Cycling' in pref:
         if weather == 'Rain':
             n = 2
@@ -126,10 +135,17 @@ def cards():
         else:
             n = 3
     temp = data
-    merged = pd.merge(temp, user, on = 'id', how = 'left')
-    merged['Rating'] = merged['Rating'].fillna(0)
-    merged = merged.astype({'Rating': 'int64'})
-    
+    user = user.drop(['web_id'], axis = 1)
+    if not user.empty:
+
+        merged = pd.merge(temp, user, left_on = 'id', right_on = 'iid', how = 'left')
+        merged['Rating'] = merged['Rating'].fillna(0)
+        merged = merged.astype({'Rating': 'int64'})
+    else:
+        merged = temp
+        merged['Rating'] = 0
+        # merged['Rating'] = merged['Rating'].fillna(0)
+        merged = merged.astype({'Rating': 'int64'})
     temp1 = pd.DataFrame(columns = ["id","title", "theme","sub_theme","latitude","longitude","green_space","walking","cardio","sightseeing","Rating"])
     temp2 = pd.DataFrame(columns = ["id", "title", "theme","sub_theme","latitude","longitude","green_space","walking","cardio","sightseeing","Rating"])
     temp3 = pd.DataFrame(columns = ["id","title", "theme","sub_theme","latitude","longitude","green_space","walking","cardio","sightseeing","Rating"])
@@ -150,8 +166,6 @@ def cards():
     if len(concat[(concat['Rating'] != 0)]) < 50:
         df_elements = concat.sample(n)
     else:
-    #     len(concat[(concat['Rating'] != 0)]) > 50
-    #     train, test = train_test_split(concat, test_size = 0.2)
         concat["theme"] = concat["theme"].astype('category')
         d1 = dict(enumerate(concat['theme'].cat.categories))
         concat["sub_theme"] = concat["sub_theme"].astype('category')
@@ -201,10 +215,19 @@ def cards():
         bike = pd.read_sql('''select * from bicycle''', conn)
 
         temp = bike
-        bikemerged = pd.merge(temp, user, on = 'id', how = 'left')
-        bikemerged['Rating'] = bikemerged['Rating'].fillna(0)
-        bikemerged = bikemerged.astype({'Rating': 'int64'})
-        bike_high = bikemerged.loc[bikemerged['Rating'] == 2]
+        
+        if not user.empty:
+
+            bikemerged = pd.merge(temp, user, left_on = 'id', right_on = 'iid', how = 'left')
+            bikemerged['Rating'] = bikemerged['Rating'].fillna(0)
+            bikemerged = bikemerged.astype({'Rating': 'int64'})
+            bike_high = bikemerged.loc[bikemerged['Rating'] == 2]
+        else:
+            bikemerged = bike
+            bikemerged['Rating'] = 0
+            bikemerged = bikemerged.astype({'Rating': 'int64'})
+            bike_high = bikemerged
+        
         selection = bike_high.sample(1)
         if selection.empty:
             record = bike.sample(1)
@@ -221,9 +244,11 @@ def cards():
     # INDOOR ACTIVITY
     indoor = pd.read_sql('''select * from indoor''', conn)
 
-    indoor = pd.merge(indoor, user, on = 'id', how = 'left')
-    indoor['Rating'] = indoor['Rating'].fillna(0)
-    indoor = indoor.astype({'Rating': 'int64'})
+    if not user.empty:
+
+        indoor = pd.merge(indoor, user, on = 'id', how = 'left')
+        indoor['Rating'] = indoor['Rating'].fillna(0)
+        indoor = indoor.astype({'Rating': 'int64'})
 
 
     if 'Cardio' in pref:
@@ -255,4 +280,5 @@ if __name__ == "__main__":
 
 
 # return Response(df.to_json(orient="records"), mimetype='application/json')
+
 
