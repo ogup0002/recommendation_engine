@@ -31,7 +31,10 @@ def rating_():
     args = incoming_args.parse_args()
     ratings = args
     print(ratings)
-
+    user_id = int(args['web_id'])
+    print(user_id)
+    iid = int(args['iid'])
+    print(iid)
     df = pd.DataFrame([ratings])
     print(df)
     d1 = '''INSERT INTO user_rating (web_id, iid, rating) values (%s, %s, %s)'''
@@ -40,10 +43,14 @@ def rating_():
     val1 = (df["web_id"][0], df["iid"][0], df['rating'][0])
     val2 = (df['web_id'][0], df["iid"][0], df["rating"][0], df['web_id'][0], df["iid"][0])
 
-    user_rating = pd.read_sql('''select * from user_rating''', conn)
-    comp1 = [df['web_id'][0], df['iid'][0]]
-    comp2 = [user_rating['web_id'].values, user_rating['iid'].values]
-    if comp1 == comp2:
+    # user_rating = pd.read_sql('''select * from user_rating''', conn)
+    # comp1 = [df['web_id'][0], df['iid'][0]]
+
+    sql_query = 'select * from user_rating where (web_id = "{}" and iid = "{}")'.format(user_id, iid)
+    check = pd.read_sql(sql_query, conn)
+    check = check[check['iid'] == iid]
+    # comp2 = [user_rating['web_id'].values, user_rating['iid'].values]
+    if not check.empty:
         ## UPDATE
         cursorObject.execute(d2, val2)
         conn.commit()
