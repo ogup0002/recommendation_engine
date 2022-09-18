@@ -30,13 +30,13 @@ def rating_():
     incoming_args.add_argument("rating", type=int, help = 'User rating can only be number 1 or 2.')
     args = incoming_args.parse_args()
     ratings = args
-    print(ratings)
+    # print(ratings)
     user_id = int(args['web_id'])
-    print(user_id)
+    # print(user_id)
     iid = int(args['iid'])
-    print(iid)
+    # print(iid)
     df = pd.DataFrame([ratings])
-    print(df)
+    # print(df)
     d1 = '''INSERT INTO user_rating (web_id, iid, rating) values (%s, %s, %s)'''
     d2 = '''UPDATE user_rating set web_id = %s, iid = %s, rating = %s where (web_id = %s and iid = %s)'''
 
@@ -49,6 +49,7 @@ def rating_():
     sql_query = 'select * from user_rating where (web_id = "{}" and iid = "{}")'.format(user_id, iid)
     check = pd.read_sql(sql_query, conn)
     check = check[check['iid'] == iid]
+    print(check)
     # comp2 = [user_rating['web_id'].values, user_rating['iid'].values]
     if not check.empty:
         ## UPDATE
@@ -138,14 +139,14 @@ def cards():
     print(pref)
     if 'Cycling' in pref:
         if weather == 'Rain':
-            n = 2
-        else:
             n = 3
+        else:
+            n = 2
     else:
         if weather == 'Rain':
-            n = 2
-        else:
             n = 3
+        else:
+            n = 4
     temp = data
     user = user.drop(['web_id'], axis = 1)
     if not user.empty:
@@ -204,6 +205,7 @@ def cards():
         pred['sub_theme'] = pred['sub_theme'].map(d2)
         df_elements = pred.sample(n)
     df_elements = df_elements.drop(['walking', 'cardio', 'sightseeing', 'green_space'], axis = 1)
+    # print(df_elements)
 
     from math import radians, cos, sin, asin, sqrt
     # HAVERSINE DISTANCE CALCULATION
@@ -253,7 +255,9 @@ def cards():
             record = bikemerged.loc[bikemerged.haversine_calc == bikemerged.haversine_calc.min()]
             record = record.drop(['haversine_calc'], axis = 1)
 
-    output = pd.concat([df_elements, record])
+        output = pd.concat([df_elements, record])
+    else:
+        output = df_elements
 
     # INDOOR ACTIVITY
     indoor = pd.read_sql('''select * from indoor''', conn)
@@ -269,12 +273,14 @@ def cards():
     if 'Cardio' in pref:
         indoor_act = indoor.loc[indoor['theme'] == 'High Intensity']
         indoor_act = indoor_act.sample(3)
+
     else:
         indoor_act = indoor.loc[indoor['theme'] == 'Low Intensity']
         indoor_act = indoor_act.sample(3)
 
     if weather == 'Rain':
         indoor_act = indoor_act.sample(3)
+        print(indoor_act)
     else:
         indoor_act = indoor_act.sample(2)
 
@@ -320,14 +326,14 @@ def crosscard():
     print(pref)
     if 'Cycling' in pref:
         if weather == 'Rain':
-            n = 2
-        else:
             n = 3
+        else:
+            n = 2
     else:
         if weather == 'Rain':
-            n = 2
-        else:
             n = 3
+        else:
+            n = 4
     temp = data
     user = user.drop(['web_id'], axis = 1)
     if not user.empty:
@@ -386,6 +392,7 @@ def crosscard():
         pred['sub_theme'] = pred['sub_theme'].map(d2)
         df_elements = pred.sample(n)
     df_elements = df_elements.drop(['walking', 'cardio', 'sightseeing', 'green_space'], axis = 1)
+    # print(df_elements)
 
     from math import radians, cos, sin, asin, sqrt
     # HAVERSINE DISTANCE CALCULATION
@@ -435,7 +442,9 @@ def crosscard():
             record = bikemerged.loc[bikemerged.haversine_calc == bikemerged.haversine_calc.min()]
             record = record.drop(['haversine_calc'], axis = 1)
 
-    output = pd.concat([df_elements, record])
+        output = pd.concat([df_elements, record])
+    else:
+        output = df_elements
 
     # INDOOR ACTIVITY
     indoor = pd.read_sql('''select * from indoor''', conn)
@@ -451,12 +460,14 @@ def crosscard():
     if 'Cardio' in pref:
         indoor_act = indoor.loc[indoor['theme'] == 'High Intensity']
         indoor_act = indoor_act.sample(3)
+
     else:
         indoor_act = indoor.loc[indoor['theme'] == 'Low Intensity']
         indoor_act = indoor_act.sample(3)
 
     if weather == 'Rain':
         indoor_act = indoor_act.sample(3)
+        print(indoor_act)
     else:
         indoor_act = indoor_act.sample(2)
 
