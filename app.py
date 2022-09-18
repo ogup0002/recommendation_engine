@@ -108,7 +108,7 @@ def cards():
     response = requests.get(url)
     json = response.json()
     weather = json['weather'][0]['main']
-
+    # user_id = 4321
     ## DATA
     data = pd.read_sql('''select * from outdoor''', conn)
     # data= data.drop(['Rating'], axis = 1)
@@ -123,10 +123,12 @@ def cards():
     # User Rating
     sql_query = 'select * from user_rating where web_id = "{}"'.format(user_id)
     user = pd.read_sql(sql_query, conn)
+    user = user.rename(columns={"iid": "id"})
     # User Preference
     sql_query = 'select * from user_preference where web_id = "{}"'.format(user_id)
     pref = pd.read_sql(sql_query, conn)
     pref = pref['preference'][0]
+    print(pref)
     if 'Cycling' in pref:
         if weather == 'Rain':
             n = 2
@@ -141,24 +143,24 @@ def cards():
     user = user.drop(['web_id'], axis = 1)
     if not user.empty:
 
-        merged = pd.merge(temp, user, left_on = 'id', right_on = 'iid', how = 'left')
-        merged['Rating'] = merged['Rating'].fillna(0)
-        merged = merged.astype({'Rating': 'int64'})
+        merged = pd.merge(temp, user, on = 'id', how = 'left')
+        merged['rating'] = merged['rating'].fillna(0)
+        merged = merged.astype({'rating': 'int64'})
     else:
         merged = temp
-        merged['Rating'] = 0
+        merged['rating'] = 0
         # merged['Rating'] = merged['Rating'].fillna(0)
-        merged = merged.astype({'Rating': 'int64'})
-    temp1 = pd.DataFrame(columns = ["id","title", "theme","sub_theme","latitude","longitude","green_space","walking","cardio","sightseeing","Rating"])
-    temp2 = pd.DataFrame(columns = ["id", "title", "theme","sub_theme","latitude","longitude","green_space","walking","cardio","sightseeing","Rating"])
-    temp3 = pd.DataFrame(columns = ["id","title", "theme","sub_theme","latitude","longitude","green_space","walking","cardio","sightseeing","Rating"])
+        merged = merged.astype({'rating': 'int64'})
+    temp1 = pd.DataFrame(columns = ["id","title", "theme","sub_theme","latitude","longitude","green_space","walking","cardio","sightseeing","rating"])
+    temp2 = pd.DataFrame(columns = ["id", "title", "theme","sub_theme","latitude","longitude","green_space","walking","cardio","sightseeing","rating"])
+    temp3 = pd.DataFrame(columns = ["id","title", "theme","sub_theme","latitude","longitude","green_space","walking","cardio","sightseeing","rating"])
     if 'Walking' in pref:
         temp1 = merged[merged.walking != False]
     if 'Cardio' in pref:
         temp2 = merged[merged.cardio != False]
     if 'Sightseeing' in pref:
         temp3 = merged[merged.sightseeing != False]
-    
+
 
     # merging data as rows are reduced
     concat = pd.concat([temp1, temp2, temp3])
@@ -166,7 +168,7 @@ def cards():
         concat = temp
 
     from sklearn.naive_bayes import GaussianNB
-    if len(concat[(concat['Rating'] != 0)]) < 50:
+    if len(concat[(concat['rating'] != 0)]) < 50:
         df_elements = concat.sample(n)
     else:
         concat["theme"] = concat["theme"].astype('category')
@@ -176,26 +178,26 @@ def cards():
         concat["theme"] = concat["theme"].cat.codes
         concat["sub_theme"] = concat["sub_theme"].cat.codes
 
-        train = concat.loc[concat['Rating'] != 0]
-        test = concat.loc[concat['Rating'] == 0]
-        x_train = train.loc[:, ~train.columns.isin(['Rating', 'title'])]
-        y_train = train['Rating']
-        x_test = test.loc[:, ~test.columns.isin(['Rating', 'title'])]
-        y_test = test['Rating']
+        train = concat.loc[concat['rating'] != 0]
+        test = concat.loc[concat['rating'] == 0]
+        x_train = train.loc[:, ~train.columns.isin(['rating', 'title'])]
+        y_train = train['rating']
+        x_test = test.loc[:, ~test.columns.isin(['rating', 'title'])]
+        y_test = test['rating']
         from sklearn.naive_bayes import GaussianNB
         gnb = GaussianNB()
         gnb.fit(x_train, y_train)
         y_pred = gnb.predict(x_test)
-        train['Rating'] = y_train
-        test['Rating'] = y_pred
+        train['rating'] = y_train
+        test['rating'] = y_pred
 
         pred = pd.concat([train, test])
-        pred = pred.loc[pred['Rating'] == 2]
+        pred = pred.loc[pred['rating'] == 2]
         pred['theme'] = pred['theme'].map(d1)
         pred['sub_theme'] = pred['sub_theme'].map(d2)
         df_elements = pred.sample(n)
     df_elements = df_elements.drop(['walking', 'cardio', 'sightseeing', 'green_space'], axis = 1)
-    
+
     from math import radians, cos, sin, asin, sqrt
     # HAVERSINE DISTANCE CALCULATION
     def haversine(lon1, lat1, lon2, lat2):
@@ -218,20 +220,22 @@ def cards():
         bike = pd.read_sql('''select * from bicycle''', conn)
 
         temp = bike
-        
-        if not user.empty:
 
-            bikemerged = pd.merge(temp, user, left_on = 'id', right_on = 'iid', how = 'left')
-            bikemerged['Rating'] = bikemerged['Rating'].fillna(0)
-            bikemerged = bikemerged.astype({'Rating': 'int64'})
-            bike_high = bikemerged.loc[bikemerged['Rating'] == 2]
+    #     if not user.empty:
+
+        bikemerged = pd.merge(temp, user, on = 'id', how = 'left')
+        bikemerged['rating'] = bikemerged['rating'].fillna(0)
+        bikemerged = bikemerged.astype({'rating': 'int64'})
+        bike_high = bikemerged.loc[bikemerged['rating'] == 2]
+        if not bike_high.empty:    
+            selection = bike_high.sample(1)
         else:
             bikemerged = bike
-            bikemerged['Rating'] = 0
-            bikemerged = bikemerged.astype({'Rating': 'int64'})
+            bikemerged['rating'] = 0
+            bikemerged = bikemerged.astype({'rating': 'int64'})
             bike_high = bikemerged
+            selection = bike_high.sample(1)
         
-        selection = bike_high.sample(1)
         if selection.empty:
             record = bike.sample(1)
         else:
@@ -250,9 +254,10 @@ def cards():
     if not user.empty:
 
         indoor = pd.merge(indoor, user, on = 'id', how = 'left')
-        indoor['Rating'] = indoor['Rating'].fillna(0)
-        indoor = indoor.astype({'Rating': 'int64'})
-
+        indoor['rating'] = indoor['rating'].fillna(0)
+        indoor = indoor.astype({'rating': 'int64'})
+    else:
+        indoor['rating'] = 0
 
     if 'Cardio' in pref:
         indoor_act = indoor.loc[indoor['theme'] == 'High Intensity']
@@ -260,7 +265,7 @@ def cards():
     else:
         indoor_act = indoor.loc[indoor['theme'] == 'Low Intensity']
         indoor_act = indoor_act.sample(3)
-        
+
     if weather == 'Rain':
         indoor_act = indoor_act.sample(3)
     else:
@@ -274,6 +279,7 @@ def cards():
 
     return out
 
+
 @app.route("/crosscard", methods = ['PUT'])
 def crosscard():
     incoming_args = reqparse.RequestParser()
@@ -284,7 +290,7 @@ def crosscard():
     response = requests.get(url)
     json = response.json()
     weather = json['weather'][0]['main']
-
+    # user_id = 4321
     ## DATA
     data = pd.read_sql('''select * from outdoor''', conn)
     # data= data.drop(['Rating'], axis = 1)
@@ -299,10 +305,12 @@ def crosscard():
     # User Rating
     sql_query = 'select * from user_rating where web_id = "{}"'.format(user_id)
     user = pd.read_sql(sql_query, conn)
+    user = user.rename(columns={"iid": "id"})
     # User Preference
     sql_query = 'select * from user_preference where web_id = "{}"'.format(user_id)
     pref = pd.read_sql(sql_query, conn)
     pref = pref['preference'][0]
+    print(pref)
     if 'Cycling' in pref:
         if weather == 'Rain':
             n = 2
@@ -317,24 +325,24 @@ def crosscard():
     user = user.drop(['web_id'], axis = 1)
     if not user.empty:
 
-        merged = pd.merge(temp, user, left_on = 'id', right_on = 'iid', how = 'left')
-        merged['Rating'] = merged['Rating'].fillna(0)
-        merged = merged.astype({'Rating': 'int64'})
+        merged = pd.merge(temp, user, on = 'id', how = 'left')
+        merged['rating'] = merged['rating'].fillna(0)
+        merged = merged.astype({'rating': 'int64'})
     else:
         merged = temp
-        merged['Rating'] = 0
+        merged['rating'] = 0
         # merged['Rating'] = merged['Rating'].fillna(0)
-        merged = merged.astype({'Rating': 'int64'})
-    temp1 = pd.DataFrame(columns = ["id","title", "theme","sub_theme","latitude","longitude","green_space","walking","cardio","sightseeing","Rating"])
-    temp2 = pd.DataFrame(columns = ["id", "title", "theme","sub_theme","latitude","longitude","green_space","walking","cardio","sightseeing","Rating"])
-    temp3 = pd.DataFrame(columns = ["id","title", "theme","sub_theme","latitude","longitude","green_space","walking","cardio","sightseeing","Rating"])
+        merged = merged.astype({'rating': 'int64'})
+    temp1 = pd.DataFrame(columns = ["id","title", "theme","sub_theme","latitude","longitude","green_space","walking","cardio","sightseeing","rating"])
+    temp2 = pd.DataFrame(columns = ["id", "title", "theme","sub_theme","latitude","longitude","green_space","walking","cardio","sightseeing","rating"])
+    temp3 = pd.DataFrame(columns = ["id","title", "theme","sub_theme","latitude","longitude","green_space","walking","cardio","sightseeing","rating"])
     if 'Walking' in pref:
         temp1 = merged[merged.walking != False]
     if 'Cardio' in pref:
         temp2 = merged[merged.cardio != False]
     if 'Sightseeing' in pref:
         temp3 = merged[merged.sightseeing != False]
-    
+
 
     # merging data as rows are reduced
     concat = pd.concat([temp1, temp2, temp3])
@@ -342,7 +350,7 @@ def crosscard():
         concat = temp
 
     from sklearn.naive_bayes import GaussianNB
-    if len(concat[(concat['Rating'] != 0)]) < 50:
+    if len(concat[(concat['rating'] != 0)]) < 50:
         df_elements = concat.sample(n)
     else:
         concat["theme"] = concat["theme"].astype('category')
@@ -352,26 +360,26 @@ def crosscard():
         concat["theme"] = concat["theme"].cat.codes
         concat["sub_theme"] = concat["sub_theme"].cat.codes
 
-        train = concat.loc[concat['Rating'] != 0]
-        test = concat.loc[concat['Rating'] == 0]
-        x_train = train.loc[:, ~train.columns.isin(['Rating', 'title'])]
-        y_train = train['Rating']
-        x_test = test.loc[:, ~test.columns.isin(['Rating', 'title'])]
-        y_test = test['Rating']
+        train = concat.loc[concat['rating'] != 0]
+        test = concat.loc[concat['rating'] == 0]
+        x_train = train.loc[:, ~train.columns.isin(['rating', 'title'])]
+        y_train = train['rating']
+        x_test = test.loc[:, ~test.columns.isin(['rating', 'title'])]
+        y_test = test['rating']
         from sklearn.naive_bayes import GaussianNB
         gnb = GaussianNB()
         gnb.fit(x_train, y_train)
         y_pred = gnb.predict(x_test)
-        train['Rating'] = y_train
-        test['Rating'] = y_pred
+        train['rating'] = y_train
+        test['rating'] = y_pred
 
         pred = pd.concat([train, test])
-        pred = pred.loc[pred['Rating'] == 2]
+        pred = pred.loc[pred['rating'] == 2]
         pred['theme'] = pred['theme'].map(d1)
         pred['sub_theme'] = pred['sub_theme'].map(d2)
         df_elements = pred.sample(n)
     df_elements = df_elements.drop(['walking', 'cardio', 'sightseeing', 'green_space'], axis = 1)
-    
+
     from math import radians, cos, sin, asin, sqrt
     # HAVERSINE DISTANCE CALCULATION
     def haversine(lon1, lat1, lon2, lat2):
@@ -394,20 +402,22 @@ def crosscard():
         bike = pd.read_sql('''select * from bicycle''', conn)
 
         temp = bike
-        
-        if not user.empty:
 
-            bikemerged = pd.merge(temp, user, left_on = 'id', right_on = 'iid', how = 'left')
-            bikemerged['Rating'] = bikemerged['Rating'].fillna(0)
-            bikemerged = bikemerged.astype({'Rating': 'int64'})
-            bike_high = bikemerged.loc[bikemerged['Rating'] == 2]
+    #     if not user.empty:
+
+        bikemerged = pd.merge(temp, user, on = 'id', how = 'left')
+        bikemerged['rating'] = bikemerged['rating'].fillna(0)
+        bikemerged = bikemerged.astype({'rating': 'int64'})
+        bike_high = bikemerged.loc[bikemerged['rating'] == 2]
+        if not bike_high.empty:    
+            selection = bike_high.sample(1)
         else:
             bikemerged = bike
-            bikemerged['Rating'] = 0
-            bikemerged = bikemerged.astype({'Rating': 'int64'})
+            bikemerged['rating'] = 0
+            bikemerged = bikemerged.astype({'rating': 'int64'})
             bike_high = bikemerged
+            selection = bike_high.sample(1)
         
-        selection = bike_high.sample(1)
         if selection.empty:
             record = bike.sample(1)
         else:
@@ -426,9 +436,10 @@ def crosscard():
     if not user.empty:
 
         indoor = pd.merge(indoor, user, on = 'id', how = 'left')
-        indoor['Rating'] = indoor['Rating'].fillna(0)
-        indoor = indoor.astype({'Rating': 'int64'})
-
+        indoor['rating'] = indoor['rating'].fillna(0)
+        indoor = indoor.astype({'rating': 'int64'})
+    else:
+        indoor['rating'] = 0
 
     if 'Cardio' in pref:
         indoor_act = indoor.loc[indoor['theme'] == 'High Intensity']
@@ -436,7 +447,7 @@ def crosscard():
     else:
         indoor_act = indoor.loc[indoor['theme'] == 'Low Intensity']
         indoor_act = indoor_act.sample(3)
-        
+
     if weather == 'Rain':
         indoor_act = indoor_act.sample(3)
     else:
@@ -450,6 +461,10 @@ def crosscard():
 
     return out
 
+
+
+
+
 @app.route("/trial", methods = ['GET'])
 def hello():
     return {"Hello": "Hello world says hi!"}
@@ -459,5 +474,3 @@ if __name__ == "__main__":
 
 
 # return Response(df.to_json(orient="records"), mimetype='application/json')
-
-
