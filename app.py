@@ -3,11 +3,10 @@ from flask_restful import Api, Resource, reqparse
 import pymysql
 import pandas as pd
 import requests
-from flask_cors import CORS
 app = Flask(__name__)
 # api = Api(app)
 
-CORS(app)
+
 conn = pymysql.connect(
         user="sittofit",
         password="0AxPzbedoJFNTfPj67Pr",
@@ -283,7 +282,7 @@ def cards():
         indoor_act = indoor_act.sample(3)
         print(indoor_act)
     else:
-        indoor_act = indoor_act.sample(2)
+        indoor_act = indoor_act.sample(3)
 
     output_final = pd.concat([output, indoor_act]).sample(6)
 
