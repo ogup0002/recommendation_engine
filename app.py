@@ -5,7 +5,7 @@ import pandas as pd
 import requests
 app = Flask(__name__)
 # api = Api(app)
-
+CORS(app)
 
 conn = pymysql.connect(
         user="sittofit",
