@@ -287,7 +287,7 @@ def cards():
     else:
         indoor_act = indoor_act.sample(3)
 
-    output_final = pd.concat([output, indoor_act]).sample(3)
+    output_final = pd.concat([output, indoor_act]).sample(4)
 
     out = output_final.to_json(orient='index')    
     # print(out)
