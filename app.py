@@ -3,9 +3,10 @@ from flask_restful import Api, Resource, reqparse
 import pymysql
 import pandas as pd
 import requests
+from sklearn.naive_bayes import GaussianNB
 from flask_cors import CORS
 app = Flask(__name__)
-# api = Api(app)
+api = Api(app)
 CORS(app)
 
 conn = pymysql.connect(
@@ -59,7 +60,7 @@ def rating_():
     else:
         cursorObject.execute(d1, val1)
         conn.commit()
-#     conn.close()
+    conn.close()
     return {'view': 'You have arrived here'} 
 
 @app.route("/preference", methods = ['PUT'])
@@ -102,7 +103,7 @@ def preference():
         cursorObject.execute(d1, val1)
         conn.commit()
 
-#     conn.close()
+    conn.close()
 
 
     return {"View": "Success"}
@@ -286,13 +287,177 @@ def cards():
     else:
         indoor_act = indoor_act.sample(3)
 
-    output_final = pd.concat([output, indoor_act]).sample(6)
+    output_final = pd.concat([output, indoor_act]).sample(3)
 
     out = output_final.to_json(orient='index')    
     # print(out)
 
-#     conn.close()
+    conn.close()
     return out
+
+
+
+@app.route("/popular", methods = ['PUT'])
+def pop():
+    incoming_args = reqparse.RequestParser()
+    incoming_args.add_argument("web_id", type=int, help = "Browser ID, only integer value accepted.")
+    args = incoming_args.parse_args()
+    user_id = args['web_id']
+    url = "https://api.openweathermap.org/data/2.5/weather?lat=-37.840935&lon=144.946457&appid=c92389d6904463e3cb24208905434fd9"
+    response = requests.get(url)
+    json = response.json()
+    weather = json['weather'][0]['main']
+    # user_id = 4321
+    ## DATA
+    data = pd.read_sql('''select * from outdoor''', conn)
+    
+    sql_query = 'select * from user_rating where rating = 2'
+    user = pd.read_sql(sql_query, conn)
+    user = user.rename(columns={"iid": "id"})
+    # User Preference
+    sql_query = 'select * from user_preference where web_id = "{}"'.format(user_id)
+    pref = pd.read_sql(sql_query, conn)
+    pref = pref['preference'][0]
+    print(pref)
+    if 'Cycling' in pref:
+        if weather == 'Rain':
+            n = 3
+        else:
+            n = 2
+    else:
+        if weather == 'Rain':
+            n = 3
+        else:
+            n = 4
+    temp = data
+    user = user.drop(['web_id'], axis = 1)
+    if not user.empty:
+
+        merged = pd.merge(temp, user, on = 'id', how = 'left')
+        merged['rating'] = merged['rating'].fillna(0)
+        print(merged)
+        merged = merged.astype({'rating': 'int64'})
+    else:
+        merged = temp
+        merged['rating'] = 0
+        # merged['Rating'] = merged['Rating'].fillna(0)
+        merged = merged.astype({'rating': 'int64'})
+    temp1 = pd.DataFrame(columns = ["id","title", "theme","sub_theme","latitude","longitude","green_space","walking","cardio","sightseeing","rating"])
+    temp2 = pd.DataFrame(columns = ["id", "title", "theme","sub_theme","latitude","longitude","green_space","walking","cardio","sightseeing","rating"])
+    temp3 = pd.DataFrame(columns = ["id","title", "theme","sub_theme","latitude","longitude","green_space","walking","cardio","sightseeing","rating"])
+    if 'Walking' in pref:
+        temp1 = merged[merged.walking != False]
+    if 'Cardio' in pref:
+        temp2 = merged[merged.cardio != False]
+    if 'Sightseeing' in pref:
+        temp3 = merged[merged.sightseeing != False]
+
+
+    # merging data as rows are reduced
+    concat = pd.concat([temp1, temp2, temp3])
+    if concat.empty:
+        concat = temp
+
+    from sklearn.naive_bayes import GaussianNB
+    
+    concat_new = concat.loc[concat['rating'] == 2]
+    if concat_new.empty:
+        df_elements = concat.sample(n)
+    elif len(concat_new) < n:
+        df_elements = concat.sample(n)
+    else:
+        df_elements = concat_new.sample(n)
+    
+    df_elements = df_elements.drop(['walking', 'cardio', 'sightseeing', 'green_space'], axis = 1)
+    # print(df_elements)
+
+    from math import radians, cos, sin, asin, sqrt
+    # HAVERSINE DISTANCE CALCULATION
+    def haversine(lon1, lat1, lon2, lat2):
+        """
+        Calculate the great circle distance in kilometers between two points 
+        on the earth (specified in decimal degrees)
+        """
+        # convert decimal degrees to radians 
+        lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
+
+            # haversine formula 
+        dlon = lon2 - lon1 
+        dlat = lat2 - lat1 
+        a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
+        c = 2 * asin(sqrt(a)) 
+        r = 6371 # Radius of earth in kilometers. Use 3956 for miles. Determines return value units.
+        return c * r
+
+    if 'Cycling' in pref:
+        bike = pd.read_sql('''select * from bicycle''', conn)
+
+        temp = bike
+
+    #     if not user.empty:
+
+        bikemerged = pd.merge(temp, user, on = 'id', how = 'left')
+        bikemerged['rating'] = bikemerged['rating'].fillna(0)
+        bikemerged = bikemerged.astype({'rating': 'int64'})
+        bike_high = bikemerged.loc[bikemerged['rating'] == 2]
+        if not bike_high.empty:    
+            selection = bike_high.sample(1)
+        else:
+            bikemerged = bike
+            bikemerged['rating'] = 0
+            bikemerged = bikemerged.astype({'rating': 'int64'})
+            bike_high = bikemerged
+            selection = bike_high.sample(1)
+        
+        if selection.empty:
+            record = bike.sample(1)
+        else:
+            lon, lat = selection['longitude'], selection['latitude'] 
+            bikemerged['haversine_calc'] = [haversine(lon,lat, bikemerged['longitude'][i], bikemerged['latitude'][i])for i in range(len(bike))]
+            bikemerged = bikemerged[bikemerged["haversine_calc"]>0]
+    #         bikemerged = bikemerged.drop(['Unnamed: 0'], axis = 1)
+            record = bikemerged.loc[bikemerged.haversine_calc == bikemerged.haversine_calc.min()]
+            record = record.drop(['haversine_calc'], axis = 1)
+
+        output = pd.concat([df_elements, record])
+    else:
+        output = df_elements
+
+    # INDOOR ACTIVITY
+    indoor = pd.read_sql('''select * from indoor''', conn)
+
+    if not user.empty:
+
+        indoor = pd.merge(indoor, user, on = 'id', how = 'left')
+        indoor['rating'] = indoor['rating'].fillna(0)
+        indoor = indoor.astype({'rating': 'int64'})
+    else:
+        indoor['rating'] = 0
+
+    if 'Cardio' in pref:
+        indoor_act = indoor.loc[indoor['theme'] == 'High Intensity']
+        indoor_act = indoor_act.sample(3)
+
+    else:
+        indoor_act = indoor.loc[indoor['theme'] == 'Low Intensity']
+        indoor_act = indoor_act.sample(3)
+
+    if weather == 'Rain':
+        indoor_act = indoor_act.sample(3)
+        print(indoor_act)
+    else:
+        indoor_act = indoor_act.sample(3)
+
+    output_final = pd.concat([output, indoor_act]).sample(4)
+
+    out = output_final.to_json(orient='index')    
+    # print(out)
+
+    conn.close()
+    return out
+
+
+
 
 
 @app.route("/crosscard", methods = ['PUT'])
@@ -477,7 +642,7 @@ def crosscard():
 
     out = output_final.to_json(orient='index')    
     # print(out)
-#     conn.close()
+    conn.close()
 
     return out
 
