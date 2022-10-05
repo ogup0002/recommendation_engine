@@ -60,7 +60,7 @@ def rating_():
     else:
         cursorObject.execute(d1, val1)
         conn.commit()
-    conn.close()
+#     conn.close()
     return {'view': 'You have arrived here'} 
 
 @app.route("/preference", methods = ['PUT'])
@@ -103,7 +103,7 @@ def preference():
         cursorObject.execute(d1, val1)
         conn.commit()
 
-    conn.close()
+#     conn.close()
 
 
     return {"View": "Success"}
@@ -292,7 +292,7 @@ def cards():
     out = output_final.to_json(orient='index')    
     # print(out)
 
-    conn.close()
+#     conn.close()
     return out
 
 
@@ -453,7 +453,7 @@ def pop():
     out = output_final.to_json(orient='index')    
     # print(out)
 
-    conn.close()
+#     conn.close()
     return out
 
 
@@ -642,7 +642,7 @@ def crosscard():
 
     out = output_final.to_json(orient='index')    
     # print(out)
-    conn.close()
+#     conn.close()
 
     return out
 
