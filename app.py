@@ -298,7 +298,7 @@ def cards():
 
 
 @app.route("/popular", methods = ['PUT'])
-def pop():
+def popularity():
     incoming_args = reqparse.RequestParser()
     incoming_args.add_argument("web_id", type=int, help = "Browser ID, only integer value accepted.")
     args = incoming_args.parse_args()
